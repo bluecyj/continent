@@ -1,0 +1,176 @@
+<!DOCTYPE html><html lang="zh-TW"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大陸漂移的證據</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1e90ff; /* 海洋藍色 */
+            overflow: hidden;
+            user-select: none;
+        }
+        .continent {
+            position: absolute;
+            cursor: move;
+            transform-origin: center;
+        }
+        .rotate-handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #southAmerica .rotate-handle {
+            left: -10px;
+            top: -10px;
+        }
+        #india .rotate-handle {
+            left: -10px;
+            top: -10px;
+        }
+        .rotate-handle:not(#southAmerica .rotate-handle):not(#india .rotate-handle) {
+            right: -10px;
+            bottom: -10px;
+        }
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+        }
+        button {
+            font-size: 16px;
+            padding: 5px 10px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button id="shrinkBtn">縮小圖片</button>
+        <button id="enlargeBtn">放大圖片</button>
+    </div>
+    <div id="africa" class="continent">
+        <img src="https://bluecyj.github.io/continent/Africa3.png" alt="非洲" draggable="false">
+    </div>
+    <div id="southAmerica" class="continent">
+        <img src="https://bluecyj.github.io/continent/South_America3.png" alt="南美洲" draggable="false">
+        <div class="rotate-handle"></div>
+    </div>
+    <div id="antarctica" class="continent">
+        <img src="https://bluecyj.github.io/continent/Antarctica.png" alt="南極洲" draggable="false">
+        <div class="rotate-handle"></div>
+    </div>
+    <div id="australia" class="continent">
+        <img src="https://bluecyj.github.io/continent/Australia.png" alt="澳洲" draggable="false">
+        <div class="rotate-handle"></div>
+    </div>
+    <div id="india" class="continent">
+        <img src="https://bluecyj.github.io/continent/India.png" alt="印度" draggable="false">
+        <div class="rotate-handle"></div>
+    </div>
+
+    <script>
+        const continents = document.querySelectorAll('.continent');
+        let isDragging = false;
+        let isRotating = false;
+        let startX, startY, startAngle, currentRotation;
+        let currentScale = 0.6;
+
+        function resizeImages() {
+            continents.forEach(continent => {
+                const img = continent.querySelector('img');
+                img.style.width = `${img.naturalWidth * currentScale}px`;
+                img.style.height = `${img.naturalHeight * currentScale}px`;
+            });
+        }
+
+        function positionContinents() {
+            const positions = [
+                { x: '5%', y: '5%' },
+                { x: '60%', y: '10%' },
+                { x: '30%', y: '60%' },
+                { x: '70%', y: '50%' },
+                { x: '40%', y: '30%' }
+            ];
+            continents.forEach((continent, index) => {
+                continent.style.left = positions[index].x;
+                continent.style.top = positions[index].y;
+            });
+        }
+
+        function startDrag(e) {
+            if (e.target.classList.contains('rotate-handle') && this.id !== 'africa') {
+                isRotating = true;
+                const rect = this.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                currentRotation = this.style.transform ? parseFloat(this.style.transform.replace('rotate(', '').replace('rad)', '')) : 0;
+            } else {
+                isDragging = true;
+                startX = e.clientX - this.offsetLeft;
+                startY = e.clientY - this.offsetTop;
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                const currentX = e.clientX - startX;
+                const currentY = e.clientY - startY;
+                this.style.left = `${currentX}px`;
+                this.style.top = `${currentY}px`;
+            } else if (isRotating && this.id !== 'africa') {
+                const rect = this.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                const newRotation = currentRotation + angle - startAngle;
+                this.style.transform = `rotate(${newRotation}rad)`;
+            }
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            isRotating = false;
+        }
+
+        continents.forEach(continent => {
+            continent.addEventListener('mousedown', startDrag);
+            continent.addEventListener('mousemove', drag);
+            continent.addEventListener('mouseup', stopDrag);
+            continent.addEventListener('mouseleave', stopDrag);
+
+            continent.addEventListener('touchstart', e => {
+                e.preventDefault();
+                startDrag.call(continent, e.touches[0]);
+            }, { passive: false });
+            continent.addEventListener('touchmove', e => {
+                e.preventDefault();
+                drag.call(continent, e.touches[0]);
+            }, { passive: false });
+            continent.addEventListener('touchend', stopDrag);
+            continent.addEventListener('touchcancel', stopDrag);
+        });
+
+        document.getElementById('shrinkBtn').addEventListener('click', () => {
+            currentScale *= 0.9;
+            resizeImages();
+        });
+
+        document.getElementById('enlargeBtn').addEventListener('click', () => {
+            currentScale *= 1.1;
+            resizeImages();
+        });
+
+        window.addEventListener('load', () => {
+            resizeImages();
+            positionContinents();
+        });
+    </script>
+
+
+</body></html>
