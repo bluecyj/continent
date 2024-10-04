@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="zh-TW"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大陸漂移的證據</title>
@@ -9,11 +11,13 @@
             background-color: #1e90ff; /* 海洋藍色 */
             overflow: hidden;
             user-select: none;
+            touch-action: none;
         }
         .continent {
             position: absolute;
             cursor: move;
             transform-origin: center;
+            touch-action: none;
         }
         .rotate-handle {
             position: absolute;
@@ -22,6 +26,7 @@
             background-color: red;
             border-radius: 50%;
             cursor: pointer;
+            touch-action: none;
         }
         #southAmerica .rotate-handle {
             left: -10px;
@@ -79,6 +84,7 @@
         let isRotating = false;
         let startX, startY, startAngle, currentRotation;
         let currentScale = 0.6;
+        let activeContinent = null;
 
         function resizeImages() {
             continents.forEach(continent => {
@@ -103,58 +109,58 @@
         }
 
         function startDrag(e) {
-            if (e.target.classList.contains('rotate-handle') && this.id !== 'africa') {
+            activeContinent = this;
+            const touch = e.type.startsWith('touch') ? e.touches[0] : e;
+            if (touch.target.classList.contains('rotate-handle') && this.id !== 'africa') {
                 isRotating = true;
                 const rect = this.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
-                startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                startAngle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX);
                 currentRotation = this.style.transform ? parseFloat(this.style.transform.replace('rotate(', '').replace('rad)', '')) : 0;
             } else {
                 isDragging = true;
-                startX = e.clientX - this.offsetLeft;
-                startY = e.clientY - this.offsetTop;
+                startX = touch.clientX - this.offsetLeft;
+                startY = touch.clientY - this.offsetTop;
             }
         }
 
         function drag(e) {
+            if (!activeContinent) return;
+            
+            const touch = e.type.startsWith('touch') ? e.touches[0] : e;
             if (isDragging) {
-                const currentX = e.clientX - startX;
-                const currentY = e.clientY - startY;
-                this.style.left = `${currentX}px`;
-                this.style.top = `${currentY}px`;
-            } else if (isRotating && this.id !== 'africa') {
-                const rect = this.getBoundingClientRect();
+                const currentX = touch.clientX - startX;
+                const currentY = touch.clientY - startY;
+                activeContinent.style.left = `${currentX}px`;
+                activeContinent.style.top = `${currentY}px`;
+            } else if (isRotating && activeContinent.id !== 'africa') {
+                const rect = activeContinent.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
-                const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-                const newRotation = currentRotation + angle - startAngle;
-                this.style.transform = `rotate(${newRotation}rad)`;
+                const angle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX);
+                const newRotation = angle - startAngle + currentRotation;
+                activeContinent.style.transform = `rotate(${newRotation}rad)`;
             }
         }
 
         function stopDrag() {
             isDragging = false;
             isRotating = false;
+            activeContinent = null;
         }
 
         continents.forEach(continent => {
             continent.addEventListener('mousedown', startDrag);
-            continent.addEventListener('mousemove', drag);
-            continent.addEventListener('mouseup', stopDrag);
-            continent.addEventListener('mouseleave', stopDrag);
-
-            continent.addEventListener('touchstart', e => {
-                e.preventDefault();
-                startDrag.call(continent, e.touches[0]);
-            }, { passive: false });
-            continent.addEventListener('touchmove', e => {
-                e.preventDefault();
-                drag.call(continent, e.touches[0]);
-            }, { passive: false });
-            continent.addEventListener('touchend', stopDrag);
-            continent.addEventListener('touchcancel', stopDrag);
+            continent.addEventListener('touchstart', startDrag);
         });
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag);
+
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchend', stopDrag);
+        document.addEventListener('touchcancel', stopDrag);
 
         document.getElementById('shrinkBtn').addEventListener('click', () => {
             currentScale *= 0.9;
@@ -171,6 +177,5 @@
             positionContinents();
         });
     </script>
-
-
-</body></html>
+</body>
+</html>

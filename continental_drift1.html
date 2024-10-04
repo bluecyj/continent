@@ -16,6 +16,7 @@
             position: absolute;
             cursor: move;
             user-select: none;
+            touch-action: none;
         }
         .continent {
             width: 100%;
@@ -71,50 +72,84 @@
             let angle = 0;
             let startAngle = 0;
 
-            container.onmousedown = dragMouseDown;
+            container.addEventListener('mousedown', dragStart);
+            container.addEventListener('touchstart', dragStart);
 
-            function dragMouseDown(e) {
-                e = e || window.event;
+            function dragStart(e) {
                 e.preventDefault();
                 const rect = container.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
                 
-                if (allowRotation && e.target === rotateHandle) {
-                    rotating = true;
-                    startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                if (e.type === 'touchstart') {
+                    if (allowRotation && e.target === rotateHandle) {
+                        rotating = true;
+                        startAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
+                    } else {
+                        pos3 = e.touches[0].clientX;
+                        pos4 = e.touches[0].clientY;
+                    }
                 } else {
-                    pos3 = e.clientX;
-                    pos4 = e.clientY;
+                    if (allowRotation && e.target === rotateHandle) {
+                        rotating = true;
+                        startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                    } else {
+                        pos3 = e.clientX;
+                        pos4 = e.clientY;
+                    }
                 }
 
-                document.onmouseup = closeDragElement;
-                document.onmousemove = rotating && allowRotation ? rotateElement : elementDrag;
+                document.addEventListener('mouseup', closeDragElement);
+                document.addEventListener('touchend', closeDragElement);
+                document.addEventListener('mousemove', elementDrag);
+                document.addEventListener('touchmove', elementDrag);
+            }
 
-                function elementDrag(e) {
-                    e = e || window.event;
-                    e.preventDefault();
+            function elementDrag(e) {
+                e.preventDefault();
+                if (rotating && allowRotation) {
+                    rotateElement(e);
+                } else {
+                    moveElement(e);
+                }
+            }
+
+            function moveElement(e) {
+                if (e.type === 'touchmove') {
+                    pos1 = pos3 - e.touches[0].clientX;
+                    pos2 = pos4 - e.touches[0].clientY;
+                    pos3 = e.touches[0].clientX;
+                    pos4 = e.touches[0].clientY;
+                } else {
                     pos1 = pos3 - e.clientX;
                     pos2 = pos4 - e.clientY;
                     pos3 = e.clientX;
                     pos4 = e.clientY;
-                    container.style.top = (container.offsetTop - pos2) + "px";
-                    container.style.left = (container.offsetLeft - pos1) + "px";
                 }
+                container.style.top = (container.offsetTop - pos2) + "px";
+                container.style.left = (container.offsetLeft - pos1) + "px";
+            }
 
-                function rotateElement(e) {
-                    const dx = e.clientX - centerX;
-                    const dy = e.clientY - centerY;
-                    const endAngle = Math.atan2(dy, dx);
-                    angle += (endAngle - startAngle) * (180 / Math.PI);
-                    startAngle = endAngle;
-                    container.style.transform = `rotate(${angle}deg)`;
+            function rotateElement(e) {
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                let endAngle;
+                if (e.type === 'touchmove') {
+                    endAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
+                } else {
+                    endAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
                 }
+                angle += (endAngle - startAngle) * (180 / Math.PI);
+                startAngle = endAngle;
+                container.style.transform = `rotate(${angle}deg)`;
             }
 
             function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
+                document.removeEventListener('mouseup', closeDragElement);
+                document.removeEventListener('touchend', closeDragElement);
+                document.removeEventListener('mousemove', elementDrag);
+                document.removeEventListener('touchmove', elementDrag);
                 rotating = false;
             }
         }
